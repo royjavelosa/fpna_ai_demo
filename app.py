@@ -11,15 +11,18 @@ apply_global_styles()
 
 # 🔑 Load API key (works locally & on Heroku)
 api_key = None
-if "general" in st.secrets and "OPENAI_API_KEY" in st.secrets["general"]:
-    api_key = st.secrets["general"]["OPENAI_API_KEY"]
-elif "OPENAI_API_KEY" in st.secrets:
-    api_key = st.secrets["OPENAI_API_KEY"]
-elif "OPENAI_API_KEY" in os.environ:
-    api_key = os.environ["OPENAI_API_KEY"]
+try:
+    # Check: Local secrets.toml (Elesi style)
+    if "general" in st.secrets and "OPENAI_API_KEY" in st.secrets["general"]:
+        api_key = st.secrets["general"]["OPENAI_API_KEY"]
+    elif "OPENAI_API_KEY" in st.secrets:
+        api_key = st.secrets["OPENAI_API_KEY"]
+except Exception:
+    # Check: If st.secrets not available, fall back to Heroku env vars
+    api_key = os.environ.get("OPENAI_API_KEY")
 
 if not api_key:
-    st.error("⚠️ OpenAI API key not found. Please set it in Streamlit secrets or Heroku Config Vars.")
+    st.error("⚠️ OpenAI API key not found. Please set it in Streamlit secrets (local) or Heroku Config Vars.")
     st.stop()
 
 client = OpenAI(api_key=api_key)
