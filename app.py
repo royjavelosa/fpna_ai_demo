@@ -4,6 +4,7 @@ from io import StringIO
 from openai import OpenAI
 from style import apply_global_styles 
 import os
+import altair as alt  # ✅ NEW for side-by-side chart
 
 # Page config
 st.set_page_config(page_title="FP&A AI Demo", layout="wide")
@@ -105,9 +106,22 @@ if df is not None:
         st.subheader("Variance Analysis")
         st.dataframe(df)
 
-        # Bar chart
-        st.subheader("Forecast vs Actual")
-        st.bar_chart(df.set_index("Department")[["Forecast", "Actual"]])
+        # ✅ Side-by-side bar chart (Forecast vs Actual)
+        st.subheader("Forecast vs Actual (Comparison)")
+        melted_df = df.melt(id_vars=["Department"], value_vars=["Forecast", "Actual"],
+                            var_name="Type", value_name="Value")
+        chart = (
+            alt.Chart(melted_df)
+            .mark_bar()
+            .encode(
+                x=alt.X("Department:N", title="Department"),
+                y=alt.Y("Value:Q", title="Amount"),
+                color=alt.Color("Type:N", legend=alt.Legend(title="Metric")),
+                column=alt.Column("Type:N", header=alt.Header(labelAngle=0))
+            )
+            .properties(width=80)
+        )
+        st.altair_chart(chart, use_container_width=True)
 
         # --- AI Analysis ---
         st.subheader("🤖 AI-Generated Insights")
