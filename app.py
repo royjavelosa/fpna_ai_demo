@@ -29,6 +29,18 @@ client = OpenAI(api_key=api_key)
 
 # Title and description
 st.title("📊 FP&A AI Demo")
+
+st.markdown(
+    """
+    <div style="font-size: 0.95em; color: #aaa; margin-bottom: 20px;">
+        Built with ❤️ by 
+        <a href="https://www.linkedin.com/in/royjavelosa" target="_blank" style="color:#4CAF50; text-decoration:none; font-weight:600;">
+        Roy Javelosa</a>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 st.write("Upload a CSV with Forecast vs Actual data, or use sample data to test the app.")
 
 # File upload (custom label to override Streamlit’s default 200MB text)
