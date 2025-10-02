@@ -85,7 +85,7 @@ df = st.session_state.df
 # If we have data (uploaded or sample), continue
 if df is not None:
     st.subheader("Raw Data")
-    st.dataframe(df)
+    st.dataframe(df.copy())
 
     required_cols = {"Department", "Forecast", "Actual"}
     if required_cols.issubset(df.columns):
