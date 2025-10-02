@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 from openai import OpenAI
 
+# Page config
+st.set_page_config(page_title="FP&A AI Demo", layout="wide")
 # st.write("Secrets available:", list(st.secrets.keys()))
 
 
@@ -12,10 +14,6 @@ if "general" not in st.secrets or "OPENAI_API_KEY" not in st.secrets["general"]:
 
 client = OpenAI(api_key=st.secrets["general"]["OPENAI_API_KEY"])
 
-
-# Page config
-st.set_page_config(page_title="FP&A AI Demo", layout="wide")
-
 st.title("📊 FP&A AI Demo")
 st.write("Upload a CSV with Forecast vs Actual data, view variance analysis, and generate AI insights.")
 
@@ -23,6 +21,13 @@ st.write("Upload a CSV with Forecast vs Actual data, view variance analysis, and
 uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
 
 if uploaded_file:
+    
+    # Check file size (limit = 5 MB)
+    max_size = 5 * 1024 * 1024  # 5 MB in bytes
+    if uploaded_file.size > max_size:
+        st.error("⚠️ File too large! Please upload a CSV smaller than 5 MB.")
+        st.stop()
+    
     try:
         # Read CSV safely
         df = pd.read_csv(uploaded_file)
