@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 from io import StringIO
 from openai import OpenAI
-from style import apply_global_styles 
+from style import apply_global_styles
 import os
-import altair as alt  # ✅ NEW for side-by-side chart
+import plotly.express as px
 
 # Page config
 st.set_page_config(page_title="FP&A AI Demo", layout="wide")
@@ -13,13 +13,11 @@ apply_global_styles()
 # 🔑 Load API key (works locally & on Heroku)
 api_key = None
 try:
-    # Check: Local secrets.toml (Elesi style)
     if "general" in st.secrets and "OPENAI_API_KEY" in st.secrets["general"]:
         api_key = st.secrets["general"]["OPENAI_API_KEY"]
     elif "OPENAI_API_KEY" in st.secrets:
         api_key = st.secrets["OPENAI_API_KEY"]
 except Exception:
-    # Check: If st.secrets not available, fall back to Heroku env vars
     api_key = os.environ.get("OPENAI_API_KEY")
 
 if not api_key:
@@ -28,9 +26,8 @@ if not api_key:
 
 client = OpenAI(api_key=api_key)
 
-# Title and description
+# Title and credit
 st.title("📊 FP&A AI Demo")
-
 st.markdown(
     """
     <div style="font-size: 0.95em; color: #aaa; margin-bottom: 20px;">
@@ -44,35 +41,34 @@ st.markdown(
 
 st.write("Upload a CSV with Forecast vs Actual data, or use sample data to test the app.")
 
-# File upload (custom label to override Streamlit’s default 200MB text)
+# Initialize session_state
+if "df" not in st.session_state:
+    st.session_state.df = None
+
 MAX_FILE_SIZE_MB = 5
 uploaded_file = st.file_uploader(
     f"📤 Upload CSV file — Max {MAX_FILE_SIZE_MB} MB",
     type=["csv"]
 )
 
-use_sample = st.button("Use Sample Data")
-
-df = None
-
+# Handle file upload
 if uploaded_file:
-    # File size check
-    max_size = MAX_FILE_SIZE_MB * 1024 * 1024  # 5 MB
+    max_size = MAX_FILE_SIZE_MB * 1024 * 1024
     if uploaded_file.size > max_size:
         st.error("⚠️ File too large! Please upload a CSV smaller than 5 MB.")
         st.stop()
-
     try:
         df = pd.read_csv(uploaded_file)
         if df.empty:
             st.error("⚠️ The uploaded CSV is empty.")
             st.stop()
+        st.session_state.df = df  # ✅ Persist in session_state
     except Exception as e:
         st.error(f"⚠️ Error reading CSV: {e}")
         st.stop()
 
-elif use_sample:
-    st.info("ℹ️ Using built-in sample dataset. You can also download it below to prepare your own file.")
+# Handle sample data
+if st.button("Use Sample Data"):
     sample_csv = """Department,Forecast,Actual
 Sales,100000,95000
 Marketing,50000,60000
@@ -81,16 +77,10 @@ HR,30000,28000
 Finance,40000,45000
 """
     df = pd.read_csv(StringIO(sample_csv))
-    
-    # Allow download of the sample CSV
-    st.download_button(
-        label="📥 Download Sample CSV",
-        data=sample_csv,
-        file_name="sample_fpna.csv",
-        mime="text/csv",
-    )
+    st.session_state.df = df  # ✅ Persist in session_state
 
-    st.info("💡 Tip: Upload your own CSV using the same column pattern from the Sample CSV (Department, Forecast, Actual).")
+# Always read df from session_state
+df = st.session_state.df
 
 # If we have data (uploaded or sample), continue
 if df is not None:
@@ -106,22 +96,16 @@ if df is not None:
         st.subheader("Variance Analysis")
         st.dataframe(df)
 
-        # ✅ Side-by-side bar chart (Forecast vs Actual)
-        st.subheader("Forecast vs Actual (Comparison)")
-        melted_df = df.melt(id_vars=["Department"], value_vars=["Forecast", "Actual"],
-                            var_name="Type", value_name="Value")
-        chart = (
-            alt.Chart(melted_df)
-            .mark_bar()
-            .encode(
-                x=alt.X("Department:N", title="Department"),
-                y=alt.Y("Value:Q", title="Amount"),
-                color=alt.Color("Type:N", legend=alt.Legend(title="Metric")),
-                column=alt.Column("Type:N", header=alt.Header(labelAngle=0))
-            )
-            .properties(width=80)
+        # Grouped bar chart
+        st.subheader("Forecast vs Actual")
+        fig = px.bar(
+            df,
+            x="Department",
+            y=["Forecast", "Actual"],
+            barmode="group",  # ✅ Side-by-side bars
+            title="Forecast vs Actual by Department"
         )
-        st.altair_chart(chart, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
 
         # --- AI Analysis ---
         st.subheader("🤖 AI-Generated Insights")
