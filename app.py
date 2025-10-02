@@ -3,25 +3,32 @@ import pandas as pd
 from io import StringIO
 from openai import OpenAI
 from style import apply_global_styles 
+import os
 
 # Page config
 st.set_page_config(page_title="FP&A AI Demo", layout="wide")
 apply_global_styles()
 
+# 🔑 Load API key (works locally & on Heroku)
+api_key = None
+if "general" in st.secrets and "OPENAI_API_KEY" in st.secrets["general"]:
+    api_key = st.secrets["general"]["OPENAI_API_KEY"]
+elif "OPENAI_API_KEY" in st.secrets:
+    api_key = st.secrets["OPENAI_API_KEY"]
+elif "OPENAI_API_KEY" in os.environ:
+    api_key = os.environ["OPENAI_API_KEY"]
 
-
-# Load API key from Streamlit secrets
-if "general" not in st.secrets or "OPENAI_API_KEY" not in st.secrets["general"]:
-    st.error("⚠️ OpenAI API key not found in Streamlit secrets.")
+if not api_key:
+    st.error("⚠️ OpenAI API key not found. Please set it in Streamlit secrets or Heroku Config Vars.")
     st.stop()
 
-client = OpenAI(api_key=st.secrets["general"]["OPENAI_API_KEY"])
+client = OpenAI(api_key=api_key)
 
+# Title and description
 st.title("📊 FP&A AI Demo")
 st.write("Upload a CSV with Forecast vs Actual data, or use sample data to test the app.")
 
 # File upload (custom label to override Streamlit’s default 200MB text)
-# + sample button
 MAX_FILE_SIZE_MB = 5
 uploaded_file = st.file_uploader(
     f"📤 Upload CSV file — Max {MAX_FILE_SIZE_MB} MB",
@@ -34,7 +41,7 @@ df = None
 
 if uploaded_file:
     # File size check
-    max_size = 5 * 1024 * 1024  # 5 MB
+    max_size = MAX_FILE_SIZE_MB * 1024 * 1024  # 5 MB
     if uploaded_file.size > max_size:
         st.error("⚠️ File too large! Please upload a CSV smaller than 5 MB.")
         st.stop()
